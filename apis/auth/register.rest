@@ -1,0 +1,11 @@
+POST http://localhost:5033/api/auth/register
+Accept: application/json
+Content-Type: application/json
+
+{
+  "name"         : "mohamad_user1",
+  "email"        : "mohamad_user1@gmail.com",
+  "phone_number" : "0968478015",
+  "location"     : "Damascus",
+  "password"     : "123123123" 
+}

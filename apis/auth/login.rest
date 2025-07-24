@@ -1,0 +1,9 @@
+POST http://localhost:5033/api/auth/login
+Accept: application/json
+Content-Type: application/json
+
+{
+  "phone_number" : "0968478016",
+  "email"        : "mohamad_user@gmail.com",
+  "password"     : "123123123"
+}

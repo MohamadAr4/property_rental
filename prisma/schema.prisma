@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Change this to your DB
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPERADMIN
+  ADMIN
+  COMPANY
+  AGENT
+  USER
+}
+
+enum UnitType {
+  STUDIO
+  APARTMENT
+  DUPLEX
+  PENTHOUSE
+  VILLA
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  SOLD
+  RENTED
+}
+
+enum PropertyType {
+  RESIDENTIAL
+  COMMERCIAL
+  LAND
+}
+
+model User {
+  id           BigInt   @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  phone_number String
+  password     String
+  location     String
+  longitude    Decimal?
+  latitude     Decimal?
+  role         Role
+
+  agent     Agent?
+  brokerage BrokerageCompany?
+}
+
+model Agent {
+  id             BigInt     @id @default(autoincrement())
+  company_id     BigInt
+  license_number Int
+  user_id        BigInt     @unique
+  user           User       @relation(fields: [user_id], references: [id])
+  properties     Property[]
+  ads            Ad[]
+}
+
+model BrokerageCompany {
+  id         BigInt     @id @default(autoincrement())
+  user_id    BigInt     @unique
+  user       User       @relation(fields: [user_id], references: [id])
+  properties Property[]
+}
+
+model Property {
+  id               BigInt         @id @default(autoincrement())
+  title            String
+  description      String
+  company_id       BigInt
+  agent_id         BigInt
+  location         String
+  longitude        Decimal
+  latitude         Decimal
+  post_code        String
+  images           Json
+  number_of_floors Int
+  status           PropertyStatus
+  property_type    PropertyType
+  type             String
+
+  agent   Agent            @relation(fields: [agent_id], references: [id])
+  company BrokerageCompany @relation(fields: [company_id], references: [id])
+
+  ads   Ad[]
+  units Unit[] // ✅ One property has many units
+}
+
+model Ad {
+  id          BigInt   @id @default(autoincrement())
+  title       String
+  description String
+  property_id BigInt
+  unit_id     BigInt
+  start_date  DateTime
+  end_date    DateTime
+  status      String
+  agent_id    BigInt
+  user_id     BigInt
+
+  property Property @relation(fields: [property_id], references: [id])
+  unit     Unit     @relation(fields: [unit_id], references: [id])
+  agent    Agent    @relation(fields: [agent_id], references: [id])
+}
+
+model Unit {
+  id          BigInt   @id @default(autoincrement())
+  unit_number String
+  floor       Int
+  bedrooms    Int
+  bathrooms   Int
+  area        Int
+  unit_type   UnitType
+  images      Json
+
+  property_id BigInt
+  property    Property @relation(fields: [property_id], references: [id]) // ✅ many units → one property
+
+  ads Ad[]
+}
