@@ -3,7 +3,25 @@ Accept: application/json
 Content-Type: application/json
 
 {
-  "phone_number" : "0968478016",
-  "email"        : "mohamad_user@gmail.com",
+  "phone_number" : "09123456789",
+  "email"        : "superadmin@gmail.com",
   "password"     : "123123123"
 }
+
+//super_admin_token
+
+//eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQiLCJyb2xlIjoiU1VQRVJBRE1JTiIsImlhdCI6MTc1MzQ1ODIxNywiZXhwIjoxNzUzNTQ0NjE3fQ.S3VQx2LTA040ZO-O8VxhsOoFteKxMN-x6yh934wYvaU
+
+
+//admin_token
+
+//eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjciLCJyb2xlIjoiQURNSU4iLCJpYXQiOjE3NTM0NTkyMDgsImV4cCI6MTc1MzU0NTYwOH0.Ota-1S1qjF7BYkRADYR0GuPwAK3STElwrN6D5sricx0
+
+
+//comapny_token
+
+//eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjgiLCJyb2xlIjoiQ09NUEFOWSIsImlhdCI6MTc1MzQ1OTI4NywiZXhwIjoxNzUzNTQ1Njg3fQ.LfahuoONOE1drBvA0vtXL7oZ4H7hjh45nyf1aF4Lq1o
+
+//agent_token
+
+//eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjIzIiwicm9sZSI6IkFHRU5UIiwiaWF0IjoxNzUzNDYyMDc5LCJleHAiOjE3NTM1NDg0Nzl9.oYnV2SBWMhJ9BocnaTk_cNVFRb3Bd3a6ERiKJJ_b5jk

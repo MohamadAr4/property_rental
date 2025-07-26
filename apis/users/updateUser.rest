@@ -1,0 +1,8 @@
+PUT  http://localhost:5033/api/users/8
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQiLCJyb2xlIjoiU1VQRVJBRE1JTiIsImlhdCI6MTc1MzQ1ODIxNywiZXhwIjoxNzUzNTQ0NjE3fQ.S3VQx2LTA040ZO-O8VxhsOoFteKxMN-x6yh934wYvaU
+
+{
+  "name" : "leena"
+}

@@ -1,0 +1,14 @@
+POST http://localhost:5033/api/users/create
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjciLCJyb2xlIjoiQURNSU4iLCJpYXQiOjE3NTM0NTkyMDgsImV4cCI6MTc1MzU0NTYwOH0.Ota-1S1qjF7BYkRADYR0GuPwAK3STElwrN6D5sricx0
+
+{
+  "name"         : "khaer",
+  "phone_number" : "094567890571",
+  "email"        : "Agent2@gmail.com",
+  "location"     : "Damascus",
+  "password"     : "123123123",
+  "company_id"   : "8",
+  "role"         : "AGENT"
+}
