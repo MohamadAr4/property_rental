@@ -259,8 +259,220 @@ const updateUser = async (req, res) => {
   }
 };
 
-const getUser = async (req, res) => {};
+const getUser = async (req, res) => {
+  const { id } = req.params;
+  const { name, phone_number, email, location, role, company_id } = req.query;
 
-const deleteUser = async (req, res) => {};
+  try {
+    // Handle single user request
+    if (id) {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: BigInt(id) },
+        include: {
+          agent: true,
+          brokerage: true,
+        },
+      });
+
+      if (!currentUser) {
+        return statusCode404(res, "User not found");
+      }
+
+      // Check authorization for single user
+      const userToken = req.headers.authorization?.split(" ")[1];
+      if (userToken) {
+        const decoded = tokenDecoded(userToken);
+        const isSelf = decoded.id === id;
+        const isAdmin = ["SUPERADMIN", "ADMIN"].includes(decoded.role);
+        const isCompanyViewingAgent =
+          decoded.role === "COMPANY" &&
+          currentUser.role === "AGENT" &&
+          currentUser.brokerage?.id === BigInt(decoded.id);
+
+        if (!isSelf && !isAdmin && !isCompanyViewingAgent) {
+          return statusCode403(res, "Unauthorized to view this user");
+        }
+      }
+
+      const userData = convertBigIntToString(currentUser);
+      return statusCode200(res, "User retrieved successfully", userData);
+    }
+    // Handle multiple users request
+    else {
+      const userToken = req.headers.authorization?.split(" ")[1];
+      if (!userToken) {
+        return statusCode401(res, "Unauthorized");
+      }
+
+      const decoded = tokenDecoded(userToken);
+      if (!decoded) {
+        return statusCode401(res, "Invalid token");
+      }
+
+      // Base where condition based on role
+      let whereCondition = {};
+
+      if (decoded.role === "SUPERADMIN") {
+        whereCondition = { id: { not: BigInt(decoded.id) } }; // Exclude self
+      } else if (decoded.role === "ADMIN") {
+        whereCondition = { role: { in: ["COMPANY", "AGENT", "USER"] } };
+      } else if (decoded.role === "COMPANY") {
+        whereCondition = {
+          OR: [
+            { role: "AGENT", brokerage: { id: BigInt(decoded.id) } },
+            { id: BigInt(decoded.id) }, // Include self
+          ],
+        };
+      } else {
+        return statusCode403(res, "Insufficient privileges");
+      }
+
+      // Add search filters
+      if (name) {
+        whereCondition.name = { contains: name, mode: "insensitive" };
+      }
+      if (email) {
+        whereCondition.email = { contains: email, mode: "insensitive" };
+      }
+      if (phone_number) {
+        whereCondition.phone_number = { contains: phone_number };
+      }
+      if (location) {
+        whereCondition.location = { contains: location, mode: "insensitive" };
+      }
+
+      // Role filter with authorization check
+      if (role) {
+        if (
+          decoded.role === "ADMIN" &&
+          !["COMPANY", "AGENT", "USER"].includes(role)
+        ) {
+          return statusCode403(res, "Cannot filter by this role");
+        }
+        if (decoded.role === "COMPANY" && role !== "AGENT") {
+          return statusCode403(res, "Can only filter AGENTs");
+        }
+        whereCondition.role = role;
+      }
+
+      // Company filter with authorization check
+      if (company_id) {
+        if (decoded.role === "SUPERADMIN") {
+          whereCondition.brokerage = { id: BigInt(company_id) };
+        } else {
+          // Only allow filtering by own company
+          whereCondition.brokerage = { id: BigInt(decoded.id) };
+        }
+      }
+
+      const allUsers = await prisma.user.findMany({
+        where: whereCondition,
+        include: {
+          brokerage: true,
+          agent: true,
+        },
+      });
+
+      const usersWithStringIds = allUsers.map(convertBigIntToString);
+      return statusCode200(
+        res,
+        "Users retrieved successfully",
+        usersWithStringIds
+      );
+    }
+  } catch (error) {
+    console.error("Error getting user(s):", error);
+    return statusCode500(res, "Internal server error", error);
+  }
+};
+
+const deleteUser = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Authentication check
+    const userToken = req.headers.authorization?.split(" ")[1];
+    if (!userToken) return statusCode401(res, "Unauthorized");
+
+    const decoded = tokenDecoded(userToken);
+    if (!decoded) return statusCode401(res, "Invalid token");
+
+    // Get target user with relations
+    const targetUser = await prisma.user.findUnique({
+      where: { id: BigInt(id) },
+      include: {
+        agent: true,
+        brokerage: true,
+      },
+    });
+
+    if (!targetUser) return statusCode404(res, "User not found");
+
+    // Authorization logic
+    const isSelf = decoded.id === id;
+    const isSuperAdmin = decoded.role === "SUPERADMIN";
+    const isAdmin = decoded.role === "ADMIN";
+    const isCompany = decoded.role === "COMPANY";
+
+    let canDelete = false;
+
+    if (isSuperAdmin) {
+      canDelete = true; // Super admin can delete anyone
+    } else if (isAdmin) {
+      // Admin can delete COMPANY, AGENT, and USER but not other ADMINS or SUPERADMIN
+      canDelete = ["COMPANY", "AGENT", "USER"].includes(targetUser.role);
+    } else if (isCompany) {
+      // Company can only delete their own agents or themselves
+      const isOwnAgent =
+        targetUser.role === "AGENT" &&
+        targetUser.brokerage?.id === BigInt(decoded.id);
+      canDelete = isSelf || isOwnAgent;
+    } else {
+      // Regular users can only delete themselves
+      canDelete = isSelf;
+    }
+
+    if (!canDelete) {
+      return statusCode403(res, "Unauthorized to delete this user");
+    }
+
+    // Handle special cases before deletion
+    if (targetUser.role === "COMPANY") {
+      // Delete all agents first if deleting a company
+      await prisma.agent.deleteMany({
+        where: { company_id: BigInt(decoded.id) },
+      });
+    }
+
+    // Perform deletion in transaction
+    await prisma.$transaction(async (tx) => {
+      // Delete related records based on role
+      if (targetUser.role === "AGENT" && targetUser.agent) {
+        await tx.agent.delete({
+          where: { id: targetUser.agent.id },
+        });
+      } else if (targetUser.role === "COMPANY" && targetUser.brokerage) {
+        await tx.brokerageCompany.delete({
+          where: { id: targetUser.brokerage.id },
+        });
+      }
+
+      // Finally delete the user
+      await tx.user.delete({
+        where: { id: BigInt(id) },
+      });
+    });
+
+    return statusCode200(res, "User deleted successfully");
+  } catch (error) {
+    console.error("Error deleting user:", error);
+
+    if (error.code === "P2025") {
+      return statusCode404(res, "User not found or already deleted");
+    }
+
+    return statusCode500(res, "Internal server error", error);
+  }
+};
 
 export { createUser, getUser, updateUser, deleteUser };
